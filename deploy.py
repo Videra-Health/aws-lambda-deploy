@@ -41,7 +41,7 @@ def deploy(bento_bundle_path, deployment_name, config_json):
         docker_context=deployable_path,
         docker_file="Dockerfile-lambda",
         docker_tag=repo_name,
-        cross_account_access_roles=lambda_config["cross_account_role"],
+        cross_account_access_roles=lambda_config["cross_account_roles"],
         memory_size=lambda_config["memory_size"],
         timeout=lambda_config["timeout"],
     )
@@ -57,7 +57,7 @@ def deploy(bento_bundle_path, deployment_name, config_json):
                 os.path.join(deployable_path, "build"),
             ],
             project_dir=deployable_path,
-            regions=lambda_config["regions"],
+            region=lambda_config["region"],
         )
         assert return_code == 0, f'Command failed with return code: {return_code}'
 
@@ -76,7 +76,7 @@ def deploy(bento_bundle_path, deployment_name, config_json):
                 registry_url,
             ],
             project_dir=deployable_path,
-            regions=lambda_config["regions"],
+            region=lambda_config["region"],
         )
         assert return_code == 0, f'Command failed with return code: {return_code}'
     console.print(f"Image built and pushed [b][{registry_url}][/b]")
@@ -98,7 +98,7 @@ def deploy(bento_bundle_path, deployment_name, config_json):
                 "--no-confirm-changeset",
             ],
             project_dir=deployable_path,
-            regions=lambda_config["regions"],
+            region=lambda_config["region"],
         )
         assert return_code == 0, f'Command failed with return code: {return_code}'
 

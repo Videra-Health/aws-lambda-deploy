@@ -3,6 +3,7 @@ import os
 import re
 from pathlib import Path
 import subprocess
+from typing import List
 
 from bentoml.utils.ruamel_yaml import YAML
 from utils import is_present
@@ -101,7 +102,7 @@ def generate_aws_lambda_cloudformation_template_file(
     docker_tag,
     docker_file,
     docker_context,
-    cross_account_access_roles: list[string],
+    cross_account_access_roles: List[str],
     memory_size: int,
     timeout: int,
 ):
@@ -175,12 +176,13 @@ def generate_aws_lambda_cloudformation_template_file(
             },
         }
         if len(cross_account_access_roles):
-            for cross_account_access_role in cross_account_access_roles:
-                cross_account_resource_policy = {"Action": "execute-api:Invoke",
-                                                 "Effect": "Allow",
-                                                 "Principal": cross_account_access_role}
-                sam_config["Resources"][api_name]["Properties"]["Events"]["Api"]["Properties"]["Auth"]["ResourcePolicy"]["CustomStatements"].append(cross_account_resource_policy)
-
+            for i, cross_account_access_role in enumerate(cross_account_access_roles):
+                sam_config["Resources"]["crossAccountPermission{}".format(i)] = {
+                    "Type": "AWS::Lambda::Permission",
+                    "Properties": {"FunctionName": {"Fn::GetAtt" : [api_name, "Arn"]},
+                                   "Action": "lambda:InvokeFunction",
+                                   "Principal" : cross_account_access_role}
+                }
     yaml.dump(sam_config, Path(template_file_path))
 
     # We add Outputs section separately, because the value should not
@@ -198,23 +200,20 @@ amazonaws.com/Prod"
     return template_file_path
 
 
-def call_sam_command(command, project_dir, regions):
+def call_sam_command(command, project_dir, region):
     command = ["sam"] + command
 
     # We are passing regions as part of the param, due to sam cli is not currently
     # using the region that passed in each command.
     # Since there can be multiple regions that we want to deploy in we iterate over
     # each region setting as AWS_DEFAULT_REGION for the subprocess call
-    return_codes = []
-    for region in regions:
-        copied_env = os.environ.copy()
-        copied_env["AWS_DEFAULT_REGION"] = region
+    copied_env = os.environ.copy()
+    copied_env["AWS_DEFAULT_REGION"] = region
 
-        proc = subprocess.Popen(
-            command,
-            cwd=project_dir,
-            env=copied_env,
-        )
-        proc.communicate()
-        return_codes.append(proc.returncode)
-    return sum(map(abs, return_codes)) #Won't give a meaningful return code anymore -- but it'll at least be `non 0` on an error
+    proc = subprocess.Popen(
+        command,
+        cwd=project_dir,
+        env=copied_env,
+    )
+    proc.communicate()
+    return proc.returncode
