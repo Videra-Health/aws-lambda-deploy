@@ -177,7 +177,7 @@ def generate_aws_lambda_cloudformation_template_file(
         }
         if len(cross_account_access_roles):
             for i, cross_account_access_role in enumerate(cross_account_access_roles):
-                sam_config["Resources"]["crossAccountPermission{}".format(i)] = {
+                sam_config["Resources"][f"crossAccountPermissionFor{api_name}{i}"] = {
                     "Type": "AWS::Lambda::Permission",
                     "Properties": {"FunctionName": {"Fn::GetAtt" : [api_name, "Arn"]},
                                    "Action": "lambda:InvokeFunction",
